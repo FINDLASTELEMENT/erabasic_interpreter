@@ -15,10 +15,16 @@ elses = [
 ]
 
 
+class FindError(Exception):
+    pass
+
+
 def find_func(re, code, pos=0, reverse=False):
     for i in range(len(code))[pos::(-2*reverse+1)]:
         if regex.match(re, code[i]):
             return i + 1
+
+    raise FindError('Cannot find that function')
 
 
 def find(re, code, pos, reverse=False):
@@ -48,5 +54,4 @@ def find(re, code, pos, reverse=False):
                 block_height -= 1
                 break
 
-    print('cannot find matching token')
-    return None
+    raise FindError('Cannot find matching token')

@@ -4,61 +4,49 @@ from context import *
 import sys
 
 
-def parse_var(string, context: Context):
-    stack = context.get_stack_elem()
-    if string in stack.int_var.keys():
-        return stack.int_var[string]
-    elif string in stack.str_var.keys():
-        return '"' + stack.str_var[string] + '"'
-    elif string in context.global_elem.int_var.keys():
-        return context.global_elem.int_var[string]
-    elif string in context.global_elem.str_var.keys():
-        return '"' + context.global_elem.str_var[string] + '"'
-
-    print(context)
-    print(f"NameError: invalid valuable name {string}.")
-    assert False
+oper_re = r'(\+|-|\*|/|==|!=)'
 
 
-def set_var(var_name, value, target_stack_elem, is_str: bool, index: Iterable[int]=None):
-    # todo: after adding array and local arrays (LOCAL, LOCALS, ARG, ARGS) this should change
-    if is_str and not index:
-        target_stack_elem.str_var[var_name] = value
-    elif not index:
-        target_stack_elem.int_var[var_name] = value
-    elif is_str and index:
-        target_stack_elem.str_ary[var_name].set_elem(value, index)
-    elif not is_str and index:
-        target_stack_elem.int_ary[var_name].set_elem(value, index)
+def remove_comments(line:str):
+    result = ""
+    in_expr = False
+    for char in line:
+        if char == '"':
+            in_expr = not in_expr
+
+        if not char == ";":
+            result += char
+        elif not in_expr:
+            break
+
+    return result
 
 
-def set_var_by_value(var_name, value, target_stack_elem: StackElem):
-    # todo: same as upper
-    set_var(var_name, value, target_stack_elem, type(value) == str)
+def remove_whitespace(line: str):
+    index = 0
+    while regex.match(r'[ \t]', line[index:]):
+        index += 1
+
+    return line[index:]
 
 
-def set_global_var_by_value(var_name, value, context):
-    # todo: this should be deleted
-    set_var_by_value(var_name, value, context.get_global_elem())
-
-
-def eval_and_set_var(var_name, value_str, target_stack_elem: StackElem, context):
-    _value, is_str = literal_eval(value_str, context)
-
-    set_var(var_name, _value, target_stack_elem, is_str)
-
-
-def set_global_var(var_name, value_str: str, context):
-    # todo: this too
-    eval_and_set_var(var_name, value_str, context.get_global_elem(), context)
+def get_line(code, line: int) -> str:
+    return remove_whitespace(remove_comments(code[line]))
 
 
 def exp_eval(string: str, context: Context):
-    string = regex.split(r'(\+|-|\*|/|==|!=)', string)
-    for i in range(len(string) // 2 + 1)[::2]:
+    string = regex.split(oper_re, string)
+    for i in range(0, len(string), 2):
         stripped = string[i].strip()
-        if not regex.match(regex.compile(r'([1-9])'), stripped):
-            string[i] = str(parse_var(stripped, context))
+        try:
+            value = context.get_var(stripped)
+        except ValueError:
+            value = stripped
+        else:
+            if type(value) == str:
+                string[i] = '"""' + value + '"""'
+            else:
+                string[i] = str(value)
 
     string = ''.join(string)
 
@@ -68,10 +56,15 @@ def exp_eval(string: str, context: Context):
 
 def literal_eval(string: str, context: Context):
     if string[0] == '"' and string[-1] == '"':
-        return str_eval(string[1:-1], context), True
-
+        return str_eval(string[1:-1], context), VarType.STR_SCALA
     else:
-        return exp_eval(string, context), False
+        result = exp_eval(string, context)
+        if type(result) == str:
+            result_type = VarType.STR_SCALA
+        else:
+            result_type = VarType.INT_SCALA
+            result = int(result)
+        return result, result_type
 
 
 def str_eval(string, context):
@@ -98,7 +91,6 @@ def str_eval(string, context):
     return result
 
 
-def array_eval(string: str, context: Context):
-    s = string.strip()
-    args = s.split(':')
-
+if __name__ == '__main__':
+    c = Context()
+    c.add_var("a", 1, VarType.INT_SCALA)

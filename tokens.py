@@ -33,7 +33,11 @@ class EquLine(Line):
         self.b = self.b.strip()
 
     def eval(self, context: Context, pos, code):
-        set_global_var(self.a, self.b, context)
+        b, var_type = literal_eval(self.b, context)
+        try:
+            context.set_var(self.a, b)
+        except ValueError:
+            context.add_var(self.a, b, var_type)
 
         return super().eval(context, pos, code)
 
@@ -115,7 +119,7 @@ class CallLine(InstLine):
         super().__init__(string)
         self.farg = self.arg[len(self.arg.split(' ')[0])+1:]
         args = [i.strip() for i in self.farg.split(',')]
-        self.arg = self.arg.split(' ')[0:1] + args
+        self.arg = self.arg.split(',')[0:1] + args
 
     def eval(self, context: Context, pos, code):
         new_pos = find_func('@' + self.arg[0], code)  # find from top of the file
@@ -123,28 +127,41 @@ class CallLine(InstLine):
         arg_list = [literal_eval(i, context) for i in self.arg[1:]]
 
         context.push_stack(pos)
-        for i, arg in enumerate(FuncLine(code[new_pos]).arg):
-            set_global_var_by_value(arg, arg_list[i][0], context)
+        context.add_var('ARG', IntArray(0, (1000, )), VarType.INT_ARY, True)
+        context.add_var('ARGS', StrArray("", (100, )), VarType.STR_ARY, True)
+
+        for i, arg in enumerate(FuncLine(get_line(code, new_pos - 1)).arg):
+            try:
+                context.add_var(arg, arg_list[i][0], arg_list[i][1])
+            except ValueError:
+                context.set_var(arg, arg_list[i][0])
 
         return new_pos
 
 
 class ReturnLine(InstLine):
-    re = r'RETURN'
+    re = r'[ \t]*RETURN'
 
     def eval(self, context, pos, code):
         new_pos = context.get_stack_elem().return_pos + 1
-        return_var, is_str = literal_eval(self.arg, context)
-        context.pop_stack()
-        set_global_var_by_value('RESULT', return_var, context)
+        return_var, _ = literal_eval(self.arg, context)
+        context.pop_stack(return_var)
         return new_pos
 
 
 class RestartLine(InstLine):
-    re = r'RESTART'
+    re = r'[ \t]*RESTART'
 
     def eval(self, context: Context, pos, code):
         new_pos = find_func(FuncLine.re, code, pos, True)
+        return new_pos
+
+
+class GotoLine(InstLine):
+    re = r'GOTO'
+
+    def eval(self, context: Context, pos, code):
+        new_pos = find_func(r'\$' + self.arg, code)
         return new_pos
 
 
@@ -153,15 +170,16 @@ class FuncLine(Line):
 
     def __init__(self, string: str):
         super().__init__(string)
-        self.name = string[1:].split(' ')[0]
+        self.name = string[1:].split(',')[0]
         try:
             self.arg = [i.strip() for i in string[len(self.name) + 2:].split(',')]
         except IndexError:
             self.arg = []
 
     def eval(self, context, pos, code):
-        print('function should not be normally called.')
-        sys.exit(1)
+        context.pop_stack()
+        context.push_stack(-1)
+        return pos + 1
 
 
 lines = [
@@ -175,5 +193,6 @@ lines = [
     CallLine,
     FuncLine,
     ReturnLine,
-    RestartLine
+    RestartLine,
+    GotoLine
 ]

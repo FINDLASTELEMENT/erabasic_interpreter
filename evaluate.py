@@ -4,24 +4,10 @@ from collections.abc import Iterable
 from tokens import *
 
 
-def remove_comments(line:str):
-    result = ""
-    in_expr = False
-    for char in line:
-        if char == '"':
-            in_expr = not in_expr
-
-        if not char == ";":
-            result += char
-        elif not in_expr:
-            break
-
-    return result
-
-
 def evaluate_code(code: str):
     pos = 0
     context = Context()
+
     code = code.split('\n')
     while pos < len(code):
         matched = False
@@ -34,7 +20,7 @@ def evaluate_code(code: str):
                 break
 
         if not matched:
-            print(line, 'unexpected line type')
+            raise SyntaxError('Unexpected line type')
 
     print(context)
 
