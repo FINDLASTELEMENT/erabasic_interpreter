@@ -117,6 +117,8 @@ class Context:
         self.global_elem: StackElem = StackElem()
         self.add_var('RESULT', 0, VarType.INT_SCALA)
 
+        self.flags = {}
+
     def push_stack(self, return_pos):
         self.stack.append(StackElem())
         self.stack[-1].return_pos = return_pos
@@ -169,6 +171,13 @@ class Context:
         else:
             raise ValueError("cannot add existing variable")
 
+    def auto_add_var(self, var_name: str, value, var_type: VarType, local=False):
+        try:
+            self.set_var(var_name, value)
+        except ValueError:
+            self.add_var(var_name, value, var_type, local)
+
+
     def __repr__(self):
         return f'{str(self.stack)} {str(self.global_elem)}'
 
@@ -179,6 +188,36 @@ def parse_array(string: str):
         return result[0], [int(i) for i in result[1:]]
     else:
         return result[0], None
+
+
+class ConstArg:
+    """
+    this is for make some instruction's argument immutable ex. FOR, REPEAT
+    """
+
+    def __init__(self):
+        self.unavailable = True
+        self.name = None
+
+    @staticmethod
+    def name_gen(pos, name):
+        return f'_{str(pos)}_{name}'
+
+    def init(self, context: Context, name, pos, value):
+        self.unavailable = False
+        self.name = self.name_gen(pos, name)
+        if self.name not in context.flags.keys():
+            context.flags[self.name] = value
+
+    def get(self, context):
+        if not self.unavailable:
+            return context.flags[self.name]
+        else:
+            raise ValueError
+
+    @staticmethod
+    def remove(context: Context, name, pos):
+        context.flags.pop(ConstArg.name_gen(pos, name))
 
 
 if __name__ == '__main__':

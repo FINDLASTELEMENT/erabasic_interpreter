@@ -11,7 +11,7 @@ def evaluate_code(code: str):
     code = code.split('\n')
     while pos < len(code):
         matched = False
-        line = remove_comments(code[pos])
+        line = get_line(code, pos)
 
         for line_type in lines:
             if regex.match(regex.compile(line_type.re, regex.MULTILINE), line):
