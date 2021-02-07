@@ -1,4 +1,4 @@
 # created by virtualenv automatically
 # *
-test*
+../test.erb
 *.pyc

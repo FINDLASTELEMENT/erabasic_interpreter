@@ -42,6 +42,27 @@ class EquLine(Line):
         return super().eval(context, pos, code)
 
 
+class IncreaseLine(Line):
+    re = r'[A-Za-z]* ?(\+\+|--)'
+
+    def __init__(self, string: str):
+        super(IncreaseLine, self).__init__(string)
+
+        if '+' in string:
+            self.var = string.split('++')
+            self.add_value = 1
+        else:
+            self.var = string.split('--')
+            self.add_value = -1
+
+        self.var = self.var[0] or self.var[1]
+        self.var = self.var.strip()
+
+    def eval(self, context, pos, code):
+        context.set_var(self.var, context.get_var(self.var) + self.add_value)
+        return pos + 1
+
+
 class InstLine(Line):
     re = None
 
@@ -392,5 +413,6 @@ lines = [
     ForLine,
     NextLine,
     WhileLine,
-    WendLine
+    WendLine,
+    IncreaseLine
 ]

@@ -4,7 +4,10 @@ from context import *
 import sys
 
 
-oper_re = r'(\+|-|\*|/|==|!=|<=|>=|<|>)'
+oper_re = r'(\+|-|\*|/|==|!=|<=|>=|<<|>>|!|~|%|<|>|&&|!&|!\||\|\|||?|#|^^|^)'
+operater_priority = [
+    []
+]
 
 
 def remove_comments(line:str):
