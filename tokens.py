@@ -101,6 +101,16 @@ class ElseLine(InstLine):
         pos = find(EndifLine.re, code, pos)
         return pos
 
+    def get_condition(self, context):
+        return True
+
+
+class ElseIfLine(ElseLine):
+    re = r'ELSEIF'
+
+    def get_condition(self, context):
+        return exp_eval(self.arg, context)
+
 
 class IfLine(InstLine):
     re = r'[ \t]*IF .+'
@@ -111,9 +121,20 @@ class IfLine(InstLine):
     def eval(self, context: Context, pos, code):
         if exp_eval(self.arg, context):
             pos += 1
-        else:
-            pos = min(find(EndifLine.re, code, pos), find(ElseLine.re, code, pos))
-            # find else or endif and skip it (to not skip the inside of else. else will skip to endif if executed)
+        else:  # normally else or elseif will just jump to endif. this code prevents this by jumping past it.
+            jmp_targets = (ElseLine, ElseIfLine)
+            for j in jmp_targets:
+                try:
+                    pos = find(j.re, code, pos)
+                    if j(get_line(code, pos-1)).get_condition(context):
+                        return pos
+                    else:
+                        continue
+
+                except FindError:
+                    continue
+
+            pos = find(EndifLine.re, code, pos)
 
         return pos
 
@@ -398,6 +419,7 @@ lines = [
     PrintLine,
     IfLine,
     EndifLine,
+    ElseIfLine,
     ElseLine,
     SifLine,
     CallLine,
