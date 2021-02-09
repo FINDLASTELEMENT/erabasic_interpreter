@@ -2,12 +2,7 @@ import regex
 from typing import *
 from context import *
 import sys
-
-
-oper_re = r'(\+|-|\*|/|==|!=|<=|>=|<<|>>|!|~|%|<|>|&&|!&|!\||\|\|||?|#|^^|^)'
-operater_priority = [
-    []
-]
+from exp_evaluater import eval_exp
 
 
 def remove_comments(line:str):
@@ -38,7 +33,7 @@ def get_line(code, line: int) -> str:
 
 
 def exp_eval(string: str, context: Context):
-    string = regex.split(oper_re, string)
+    string = regex.split(r'[^A-Za-z0-9 \t]', string)
     for i in range(0, len(string), 2):
         stripped = string[i].strip()
         try:
@@ -53,8 +48,7 @@ def exp_eval(string: str, context: Context):
 
     string = ''.join(string)
 
-    return eval(string)
-    # todo
+    return eval_exp(string)
 
 
 def literal_eval(string: str, context: Context):

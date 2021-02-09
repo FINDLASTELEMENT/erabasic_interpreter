@@ -5,6 +5,12 @@ from find import *
 import sys
 
 
+def get_line_instance(line: str):
+    for line_type in lines:
+        if regex.match(regex.compile(line_type.re, regex.MULTILINE), line):
+            return line_type(line)
+
+
 class Line:
     re = None
 
@@ -122,17 +128,19 @@ class IfLine(InstLine):
         if exp_eval(self.arg, context):
             pos += 1
         else:  # normally else or elseif will just jump to endif. this code prevents this by jumping past it.
-            jmp_targets = (ElseLine, ElseIfLine)
-            for j in jmp_targets:
+            jmp_targets = (ElseIfLine, )
+            re = r'(' + '|'.join(map(lambda x: x.re, jmp_targets)) + r')'
+
+            while True:
                 try:
-                    pos = find(j.re, code, pos)
-                    if j(get_line(code, pos-1)).get_condition(context):
+                    pos = find(re, code, pos)
+                    if get_line_instance(get_line(code, pos - 1)).get_condition(context):
                         return pos
                     else:
                         continue
 
                 except FindError:
-                    continue
+                    break
 
             pos = find(EndifLine.re, code, pos)
 
