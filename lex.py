@@ -5,15 +5,27 @@ reserved = {
     'NEXT': 'NEXT',
     'WHILE': 'WHILE',
     'WEND': 'WEND',
-    'DO': 'LOOP',
+    'DO': 'DO',
+    'LOOP': 'LOOP',
+    'REPEAT': 'REPEAT',
+    'REND': 'REND',
     'IF': 'IF',
     'SIF': 'SIF',
     'ELSEIF': 'ELSEIF',
     'ELSE': 'ELSE',
-    'GOTO': 'GOTO'
+    'GOTO': 'GOTO',
+    'DIM': 'DIM',
+    'DIMS': 'DIMS',
+    'CONST': 'CONST',
+    'REF': 'REF',
+    'BREAK': 'BREAK',
+    'CONTINUE': 'CONTINUE',
+    'CALL': 'CALL'
 }
 
 tokens = (
+    'INCREASE',
+    'DECREASE',
     'PLUS',
     'MINUS',
     'TIMES',
@@ -72,6 +84,8 @@ states = (
 
 t_ignore = ' \t'
 
+t_INCREASE = r'\+\+'
+t_DECREASE = r'--'
 t_PLUS = r'\+'
 t_MINUS = r'-'
 t_TIMES = r'\*'
