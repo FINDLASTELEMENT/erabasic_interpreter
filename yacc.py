@@ -25,7 +25,8 @@ precedence = (
 
 
 def p_PRINT(p):
-    'inst : PRINT STRING'
+    '''inst : PRINT STRING
+            | PRINT expr'''
     p[0] = ('PRINT', p[2])
 
 
@@ -54,7 +55,12 @@ def p_STRING(p):
 
 def p_char(p):
     '''STRING : STRING CHAR'''
-    p[0] = p[1] + p[2]
+    if type(p[1]) == str:
+        p[0] = p[1] + p[2]
+    elif type(p[1][-1]) == str:
+        p[0] = p[1][:-1] + ((p[1][-1] + p[2]),)
+    else:
+        p[0] = ('STRING', p[1], p[2])
 
 
 def p_STRFORMAT(p):
@@ -62,9 +68,9 @@ def p_STRFORMAT(p):
               | STRING MOD expr MOD
               | STRING SLASHAT expr QUESTION expr SHARP expr SLASHAT'''
     if p[2] == r'\@':
-        p[3] = Operator(ternary, (p[3], p[5], p[7]))
+        p[3] = ('TERNARY', p[3], p[5], p[7])
 
-    p[0] = String(p[1], p[3])
+    p[0] = ('STRPLUS', p[1], p[3])
 
 
 def p_args(p):

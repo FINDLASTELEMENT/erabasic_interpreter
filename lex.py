@@ -71,7 +71,6 @@ tokens = (
     'WTSPC',
     'COMMENT',
     'AT',
-    'STRING'
 )
 tokens += tuple(reserved.values())
 
@@ -150,7 +149,7 @@ def t_PRINT(t):
     option = inst[5:]
 
     opts = opt_parse(option, (
-        r'(V|S|FORM|FORMS)',
+        r'(V|S|FORMS|FORM)',
         r'(K|D)',
         r'(L|W)'
     ))
