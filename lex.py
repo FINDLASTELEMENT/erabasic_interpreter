@@ -1,4 +1,5 @@
 from ply import lex
+import regex as re
 
 reserved = {
     'FOR': 'FOR',
@@ -69,17 +70,18 @@ tokens = (
     'ID',
     'WTSPC',
     'COMMENT',
-    'AT'
+    'AT',
+    'STRING'
 )
 tokens += tuple(reserved.values())
 
 states = (
     ('string', 'exclusive'),
+    ('lstring', 'exclusive'),
     ('expr', 'inclusive'),
     ('strexpr', 'inclusive'),
     ('ternary', 'inclusive'),
     ('label', 'exclusive'),
-    ('print', 'exclusive')
 )
 
 t_ignore = ' \t'
@@ -114,7 +116,7 @@ t_QUESTION = r'\?'
 t_SHARP = r'\#'
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
-t_string_CHAR = r'(\\.|.)'
+t_string_lstring_CHAR = r'(\\.|.)'
 t_COLON = r':'
 t_COMMA = r','
 t_AT = r'@'
@@ -126,33 +128,55 @@ def t_COMMENT(t):
     pass
 
 
+def opt_parse(string, option_regexes):
+    result = []
+    for o in option_regexes:
+        r = re.findall(o, string)
+        if r:
+            result.append(r[0])
+
+    return result
+
+
 def t_PRINT(t):
-    r'PRINT(|V|S|FORM|FORMS)(|K|D)(|L|W)'
-    t.lexer.push_state('print')
+    r'PRINT[^ \t]*[ \t]*'
+
+    splitted = re.split(r'[ \t]+', t.value, maxsplit=1)
+    inst = splitted[0]
+    string = ''
+    if len(splitted) != 1:
+        string = splitted[1]
+
+    option = inst[5:]
+
+    opts = opt_parse(option, (
+        r'(V|S|FORM|FORMS)',
+        r'(K|D)',
+        r'(L|W)'
+    ))
+
+    if 'FORM' in opts:
+        t.lexer.push_state('string')
+    elif 'FORMS' not in opts:
+        t.lexer.push_state('lstring')
+    else:
+        t.lexer.push_state('INITIAL')
+    # FORMS is for displaying string variable.
+
     return t
 
 
-def t_print_WTSPC(t):
-    r'[ \t]+'
-    t.lexer.push_state('string')
-
-
-def t_string_NEWLINE(t):
-    r'\n'
-    t_NEWLINE(t)
+def t_ANY_NEWLINE(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
     t.lexer.begin('INITIAL')
+    return t
 
 
 def t_DOLLAR(t):
     r'\$'
     t.lexer.push_state('label')
     return t
-
-
-def t_label_NEWLINE(t):
-    r'\n+'
-    t_NEWLINE(t)
-    t.lexer.pop_state()
 
 
 def t_string_LBRACE(t):
@@ -215,11 +239,6 @@ def t_ANY_error(t):
 def t_label_error(t):
     print("invalid label token", t.value[0])
     t.lexer.skip(1)
-
-
-def t_NEWLINE(t):
-    r'\n+'
-    t.lexer.lineno += len(t.value)
 
 
 def t_ID(t):

@@ -1,9 +1,15 @@
 import ply.yacc as yacc
 from lex import tokens
+from lex import reserved
 from instructions import *
 
 
 precedence = (
+    ('left', 'NEWLINE'),
+    ('left', 'FOR'),
+    ('nonassoc', 'PRINT', 'GOTO', 'BREAK', 'CONTINUE', 'CALL'),
+    ('left', 'CHAR'),
+    ('left', 'COMMA'),
     ('left', 'QUESTION', 'SHARP'),
     ('left', 'AND', 'NAND', 'OR', 'NOR', 'XOR'),
     ('left', 'BAND', 'BOR', 'BXOR'),
@@ -12,101 +18,48 @@ precedence = (
     ('left', 'LSHIFT', 'RSHIFT'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
-    ('nonassoc', 'BNOT', 'NOT')
+    ('nonassoc', 'BNOT', 'NOT'),
+    ('left', 'ID'),
+    ('left', 'COLON')
 )
 
 
-def p_repeat(p):
-    'inst : REPEAT expr block REND'
-    pass
+def p_PRINT(p):
+    'inst : PRINT STRING'
+    p[0] = ('PRINT', p[2])
 
 
-def p_for(p):
-    '''inst : FOR ID COMMA expr COMMA expr block NEXT
-            | FOR ID COMMA expr COMMA expr COMMA expr block NEXT'''
-    pass
+def p_REPEAT(p):
+    'inst : REPEAT expr NEWLINE inst REND'
+    p[0] = ('REPEAT', p[2], p[4])
 
 
-def p_call(p):
-    '''inst : CALL ID
-            | CALL ID COMMA args'''
-    pass
+def p_block(p):
+    '''inst : inst NEWLINE inst'''
+    if type(p[1][0]) == tuple:
+        p[0] = p[1] + (p[3],)
+    else:
+        p[0] = (p[1], p[3])
 
 
-def p_while(p):
-    '''inst : WHILE expr block WEND'''
-    pass
+def p_end(p):
+    '''inst : inst NEWLINE'''
+    p[0] = p[1]
 
 
-def p_break(p):
-    'inst : BREAK'
-    pass
-
-
-def p_continue(p):
-    'inst : CONTINUE'
-    pass
-
-
-def p_print(p):
-    'inst : PRINT string'
-    p[0] = Print(p[2])
-
-
-def p_dim(p):
-    '''inst : SHARP DIM ID
-            | SHARP DIMS ID
-            | SHARP DIM CONST ID
-            | SHARP DIMS CONST ID
-            | SHARP DIM REF ID
-            | SHARP DIMS REF ID
-            | SHARP DIM CONST REF ID
-            | SHARP DIMS CONST REF ID
-            | SHARP DIM REF CONST ID
-            | SHARP DIMS REF CONST ID'''
-    pass
-
-
-def p_subsit(p):
-    '''inst : ID SUBSIT expr'''
-    pass
-
-
-def p_label(p):
-    '''lbl : DOLLAR ID'''
-    pass
-
-
-def p_func(p):
-    '''function : AT ID COMMA args'''
-    pass
-
-
-def p_crease(p):
-    '''inst : INCREASE ID
-            | ID INCREASE
-            | DECREASE ID
-            | ID DECREASE'''
-    pass
-
-
-def p_ID2expr(p):
-    'expr : ID'
-    pass
+def p_STRING(p):
+    'STRING : CHAR'
+    p[0] = p[1]
 
 
 def p_char(p):
-    '''STRING : CHAR CHAR
-              | STRING CHAR'''
-    if type(p[1]) == String:
-        p[0] = String(p[1], Literal(p[2]))
-    else:
-        p[0] = String(Literal(p[1]), Literal(p[2]))
+    '''STRING : STRING CHAR'''
+    p[0] = p[1] + p[2]
 
 
 def p_STRFORMAT(p):
     '''STRING : STRING LBRACE expr RBRACE
-              | STRING PERCENT expr PERCENT
+              | STRING MOD expr MOD
               | STRING SLASHAT expr QUESTION expr SHARP expr SLASHAT'''
     if p[2] == r'\@':
         p[3] = Operator(ternary, (p[3], p[5], p[7]))
@@ -117,38 +70,30 @@ def p_STRFORMAT(p):
 def p_args(p):
     '''args : expr COMMA expr
             | args COMMA expr'''
+    p[0] = ('ARGS', p[1], p[3])
 
 
 def p_index(p):
     '''expr : expr COLON expr'''
-    pass
-
-
-def p_block(p):
-    '''block : inst inst
-             | block inst'''
-    pass
+    p[0] = ('INDEX', p[1], p[3])
 
 
 def p_add(p):
     '''expr : expr PLUS expr
             | STRING PLUS STRING'''
-    pass
+    p[0] = ('ADD', p[1], p[3])
 
 
 def p_minus(p):
     'expr : expr MINUS expr'
-    pass
+    p[0] = ('MINUS', p[1], p[3])
 
 
 def p_mult_div(p):
     '''expr : expr TIMES expr
             | expr DIVIDE expr
             | STRING TIMES expr'''
-    if p[2] == '*':
-        pass
-    else:
-        pass
+    p[0] = (p[2], p[1], p[3])
 
 
 def p_equals(p):
@@ -248,7 +193,12 @@ def p_ternary(p):
 
 def p_expr2NUM(p):
     'expr : NUMBER'
-    pass
+    p[0] = p[1]
+
+
+def p_expr2ID(p):
+    'expr : ID'
+    p[0] = ('ID', p[1])
 
 
 def p_parens(p):
@@ -257,7 +207,7 @@ def p_parens(p):
 
 
 def p_error(p):
-    print("Syntax error in input!")
+    print("Syntax error in input!", p)
 
 
 parser = yacc.yacc()
