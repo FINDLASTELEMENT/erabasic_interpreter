@@ -143,7 +143,7 @@ def opt_parse(string, option_regexes):
 
 
 def t_PRINT(t):
-    r'PRINT[^ \t]*[ \t]*'
+    r'PRINT[^\s]*[ \t]*'
 
     splitted = re.split(r'[ \t]+', t.value, maxsplit=1)
     inst = splitted[0]

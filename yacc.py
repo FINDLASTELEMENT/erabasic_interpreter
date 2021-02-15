@@ -35,7 +35,8 @@ def p_insts(p):
 
 def p_PRINT(p):
     '''inst : PRINT STRING
-            | PRINT expr'''
+            | PRINT expr
+            | PRINT empty'''
     p[0] = ('PRINT', p[2])
 
 
@@ -66,7 +67,10 @@ def p_DOLOOP(p):
 
 
 def p_IF(p):
-    '''inst : IF expr insts elseif_blocks ELSE insts ENDIF'''
+    '''inst : IF expr insts elseif_blocks ELSE insts ENDIF
+            | IF expr insts empty ELSE insts ENDIF
+            | IF expr insts elseif_blocks empty empty ENDIF
+            | IF expr insts empty empty empty ENDIF'''
     p[0] = ('IF', p[2], p[3], p[4], p[6])
 
 
@@ -83,6 +87,25 @@ def p_elseif_block(p):
     'elseif_block : ELSEIF expr insts'
     p[0] = ('ELSEIF', p[2], p[3])
 
+
+def p_SELECTCASE(p):
+    '''inst : SELECTCASE expr case_blocks CASEELSE insts ENDSELECT
+            | SELECTCASE expr case_blocks empty empty ENDSELECT'''
+    p[0] = ('SELECTCASE', p[2], p[3], p[5])
+
+
+def p_case_blocks(p):
+    '''case_blocks : case_block %prec merge
+                   | case_blocks case_block %prec merge'''
+    if len(p) == 2:
+        p[0] = (p[1],)
+    else:
+        p[0] = p[1] + p[2]
+
+
+def p_case_block(p):
+    'case_block : CASE expr insts'
+    p[0] = ('CASE', p[2], p[3])
 
 
 def p_STRING(p):
@@ -191,7 +214,11 @@ def p_empty(p):
 
 
 def p_error(p):
-    print("Syntax error in input!", p)
+    if p:
+        print("Syntax error in input!", p)
+    else:
+        print('end of file')
+        return
 
 
 parser = yacc.yacc()
