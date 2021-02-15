@@ -2,12 +2,11 @@ import ply.yacc as yacc
 from lex import tokens
 from lex import reserved
 from instructions import *
+from pprint import pprint
 
 
 precedence = (
-    ('left', 'NEWLINE'),
-    ('left', 'FOR'),
-    ('nonassoc', 'PRINT', 'GOTO', 'BREAK', 'CONTINUE', 'CALL'),
+    ('left', 'merge'),
     ('left', 'CHAR'),
     ('left', 'COMMA'),
     ('left', 'QUESTION', 'SHARP'),
@@ -19,9 +18,19 @@ precedence = (
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
     ('nonassoc', 'BNOT', 'NOT'),
+    ('nonassoc', 'UMINUS'),
     ('left', 'ID'),
     ('left', 'COLON')
 )
+
+
+def p_insts(p):
+    '''insts : inst %prec merge
+             | insts inst %prec merge'''
+    if len(p) == 2:
+        p[0] = ('INSTS', p[1])
+    else:
+        p[0] = p[1] + (p[2],)
 
 
 def p_PRINT(p):
@@ -30,22 +39,50 @@ def p_PRINT(p):
     p[0] = ('PRINT', p[2])
 
 
-def p_REPEAT(p):
-    'inst : REPEAT expr NEWLINE inst REND'
-    p[0] = ('REPEAT', p[2], p[4])
+def p_CALL(p):
+    'inst : CALL ID COMMA args'
+    p[0] = ('CALL', p[2], p[4])
 
 
-def p_block(p):
-    '''inst : inst NEWLINE inst'''
-    if type(p[1][0]) == tuple:
-        p[0] = p[1] + (p[3],)
+def p_assign(p):
+    'inst : ID SUBSIT expr'
+    p[0] = ('ASSIGN', p[0], p[3])
+
+
+def p_WHILE(p):
+    '''inst : WHILE expr insts WEND'''
+    p[0] = ('WHILE', p[2], p[3])
+
+
+def p_FOR(p):
+    '''inst : FOR ID COMMA expr COMMA expr empty empty insts NEXT
+            | FOR ID COMMA expr COMMA expr COMMA expr insts NEXT'''
+    p[0] = ('FOR', p[2], p[4], p[6], p[8] if p[8] else 1, p[9])
+
+
+def p_DOLOOP(p):
+    'inst : DO insts LOOP expr'
+    p[0] = ('DO', p[4], p[2])
+
+
+def p_IF(p):
+    '''inst : IF expr insts elseif_blocks ELSE insts ENDIF'''
+    p[0] = ('IF', p[2], p[3], p[4], p[6])
+
+
+def p_elseif_blocks(p):
+    '''elseif_blocks : elseif_block %prec merge
+                     | elseif_blocks elseif_block %prec merge'''
+    if len(p) == 2:
+        p[0] = (p[1],)
     else:
-        p[0] = (p[1], p[3])
+        p[0] = p[1] + p[2]
 
 
-def p_end(p):
-    '''inst : inst NEWLINE'''
-    p[0] = p[1]
+def p_elseif_block(p):
+    'elseif_block : ELSEIF expr insts'
+    p[0] = ('ELSEIF', p[2], p[3])
+
 
 
 def p_STRING(p):
@@ -58,9 +95,9 @@ def p_char(p):
     if type(p[1]) == str:
         p[0] = p[1] + p[2]
     elif type(p[1][-1]) == str:
-        p[0] = p[1][:-1] + ((p[1][-1] + p[2]),)
+        p[0] = p[1][:-1] + ((p[1][-1] + p[2]),)  # if possible, connect strings to improve readability
     else:
-        p[0] = ('STRING', p[1], p[2])
+        p[0] = ('STRCAT', p[1], p[2])
 
 
 def p_STRFORMAT(p):
@@ -70,13 +107,17 @@ def p_STRFORMAT(p):
     if p[2] == r'\@':
         p[3] = ('TERNARY', p[3], p[5], p[7])
 
-    p[0] = ('STRPLUS', p[1], p[3])
+    p[0] = ('STRCAT', p[1], p[3])
 
 
 def p_args(p):
-    '''args : expr COMMA expr
-            | args COMMA expr'''
+    '''args : expr COMMA expr'''
     p[0] = ('ARGS', p[1], p[3])
+
+
+def p_extend_args(p):
+    'args : args COMMA expr'
+    p[0] = p[1] + (p[3],)
 
 
 def p_index(p):
@@ -84,109 +125,41 @@ def p_index(p):
     p[0] = ('INDEX', p[1], p[3])
 
 
-def p_add(p):
+def p_int_binop(p):
     '''expr : expr PLUS expr
-            | STRING PLUS STRING'''
-    p[0] = ('ADD', p[1], p[3])
-
-
-def p_minus(p):
-    'expr : expr MINUS expr'
-    p[0] = ('MINUS', p[1], p[3])
-
-
-def p_mult_div(p):
-    '''expr : expr TIMES expr
+            | expr MINUS expr
+            | expr TIMES expr
             | expr DIVIDE expr
-            | STRING TIMES expr'''
-    p[0] = (p[2], p[1], p[3])
-
-
-def p_equals(p):
-    'expr : expr EQUALS expr'
-    pass
-
-
-def p_nequals(p):
-    'expr : expr NEQUALS expr'
-    pass
-
-
-def p_cmp(p):
-    '''expr : expr LESS expr
+            | expr EQUALS expr
+            | expr NEQUALS expr
+            | expr LESS expr
             | expr LESSEQ expr
             | expr GREATER expr
-            | expr GREATEQ expr'''
-    if p[2] == '<':
-        pass
-    elif p[2] == '<=':
-        pass
-    elif p[2] == '>':
-        pass
-    elif p[2] == '>=':
-        pass
-
-    pass
-
-
-def p_shift(p):
-    '''expr : expr LSHIFT expr
-            | expr RSHIFT expr'''
-    if p[2] == '<<':
-        pass
-    else:
-        pass
-
-
-def p_and(p):
-    '''expr : expr AND expr
-            | expr NAND expr'''
-    if p[2] == '&&':
-        pass
-    else:
-        pass
-    pass
-
-
-def p_or(p):
-    '''expr : expr OR expr
-            | expr NOR expr'''
-    if p[2] == '||':
-        pass
-    else:
-        pass
-    pass
-
-
-def p_xor(p):
-    'expr : expr XOR expr'
-    pass
-
-
-def p_bitwise(p):
-    '''expr : expr BAND expr
+            | expr GREATEQ expr
+            | expr LSHIFT expr
+            | expr RSHIFT expr
+            | expr AND expr
+            | expr NAND expr
+            | expr OR expr
+            | expr NOR expr
+            | expr XOR expr
+            | expr BAND expr
             | expr BOR expr
-            | expr BXOR expr'''
-    if p[2] == '&':
-        pass
-    elif p[2] == '|':
-        pass
-    else:
-        pass
+            | expr BXOR expr
+            | expr MOD expr'''
+
+    p[0] = (p[2], p[1], p[3])
 
 
 def p_not(p):
     '''expr : NOT expr
             | BNOT expr'''
-    if p[1] == '!':
-        pass
-    else:
-        pass
+    p[0] = (p[1], p[2])
 
 
-def p_mod(p):
-    'expr : expr MOD expr'
-    pass
+def p_uminus(p):
+    'expr : MINUS expr %prec UMINUS'
+    p[0] = ('UMINUS', p[2])
 
 
 def p_ternary(p):
@@ -194,7 +167,7 @@ def p_ternary(p):
             | expr QUESTION STRING SHARP STRING
             | expr QUESTION expr SHARP STRING
             | expr QUESTION STRING SHARP expr'''
-    pass
+    p[0] = ('TERNARY', p[1], p[3], p[5])
 
 
 def p_expr2NUM(p):
@@ -209,6 +182,11 @@ def p_expr2ID(p):
 
 def p_parens(p):
     'expr : LPAREN expr RPAREN'
+    p[0] = p[2]
+
+
+def p_empty(p):
+    'empty : '
     pass
 
 
@@ -219,8 +197,12 @@ def p_error(p):
 parser = yacc.yacc()
 
 
-if __name__ == '__main__':
-    with open('test.erb', 'r') as f:
+def parse(filename):
+    with open(filename, 'r') as f:
         result = parser.parse(f.read(-1))
 
-    print(result)
+    return result
+
+
+if __name__ == '__main__':
+    pprint(parse('test.erb'))

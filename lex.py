@@ -14,6 +14,7 @@ reserved = {
     'SIF': 'SIF',
     'ELSEIF': 'ELSEIF',
     'ELSE': 'ELSE',
+    'ENDIF': 'ENDIF',
     'GOTO': 'GOTO',
     'DIM': 'DIM',
     'DIMS': 'DIMS',
@@ -21,7 +22,11 @@ reserved = {
     'REF': 'REF',
     'BREAK': 'BREAK',
     'CONTINUE': 'CONTINUE',
-    'CALL': 'CALL'
+    'CALL': 'CALL',
+    'SELECTCASE': 'SELECTCASE',
+    'CASE': 'CASE',
+    'CASEELSE': 'CASEELSE',
+    'ENDSELECT': 'ENDSELECT'
 }
 
 tokens = (
@@ -169,7 +174,6 @@ def t_ANY_NEWLINE(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
     t.lexer.begin('INITIAL')
-    return t
 
 
 def t_DOLLAR(t):
