@@ -37,12 +37,7 @@ def p_PRINT(p):
     '''inst : PRINT STRING
             | PRINT expr
             | PRINT empty'''
-    p[0] = ('PRINT', p[2])
-
-
-def p_CALL(p):
-    'inst : CALL ID COMMA args'
-    p[0] = ('CALL', p[2], p[4])
+    p[0] = (p.slice[1].value, p[2])
 
 
 def p_assign(p):
@@ -108,6 +103,16 @@ def p_case_block(p):
     p[0] = ('CASE', p[2], p[3])
 
 
+def p_SIF(p):
+    'inst : SIF expr inst'
+    p[0] = ('SIF', p[2], p[3])
+
+
+def p_INSTCALL(p):
+    'inst : ID args'
+    p[0] = ('INST', p.slice[1].value, p[2])
+
+
 def p_STRING(p):
     'STRING : CHAR'
     p[0] = p[1]
@@ -133,9 +138,19 @@ def p_STRFORMAT(p):
     p[0] = ('STRCAT', p[1], p[3])
 
 
+def p_arg(p):
+    '''arg : STRING
+           | expr'''
+    p[0] = p[1]
+
+
 def p_args(p):
-    '''args : expr COMMA expr'''
-    p[0] = ('ARGS', p[1], p[3])
+    '''args : arg %prec merge
+            | args COMMA arg %prec merge'''
+    if len(p) == 2:
+        p[0] = (p[1],)
+    else:
+        p[0] = p[1] + (p[3],)
 
 
 def p_extend_args(p):

@@ -1,5 +1,6 @@
 from ply import lex
 import regex as re
+from instructions import instructions
 
 reserved = {
     'FOR': 'FOR',
@@ -15,14 +16,6 @@ reserved = {
     'ELSEIF': 'ELSEIF',
     'ELSE': 'ELSE',
     'ENDIF': 'ENDIF',
-    'GOTO': 'GOTO',
-    'DIM': 'DIM',
-    'DIMS': 'DIMS',
-    'CONST': 'CONST',
-    'REF': 'REF',
-    'BREAK': 'BREAK',
-    'CONTINUE': 'CONTINUE',
-    'CALL': 'CALL',
     'SELECTCASE': 'SELECTCASE',
     'CASE': 'CASE',
     'CASEELSE': 'CASEELSE',
@@ -78,6 +71,7 @@ tokens = (
     'AT',
 )
 tokens += tuple(reserved.values())
+tokens += instructions
 
 states = (
     ('string', 'exclusive'),
@@ -246,7 +240,8 @@ def t_label_error(t):
 
 def t_ID(t):
     r'[a-zA-Z_]+'
-    t.type = reserved.get(t.value, 'ID')
+    if t.value in reserved.keys():
+        t.type = reserved[t.value]
     return t
 
 
