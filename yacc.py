@@ -214,6 +214,12 @@ def p_index(p):
     p[0] = ('INDEX', p[1], p[3])
 
 
+def p_str_binop(p):
+    '''STRING : STRING PLUS STRING
+              | STRING TIMES expr'''
+    p[0] = (p[2], p[1], p[3])
+
+
 def p_int_binop(p):
     '''expr : expr PLUS expr
             | expr MINUS expr
@@ -310,6 +316,11 @@ def p_parens(p):
     p[0] = p[2]
 
 
+def p_str_parens(p):
+    'expr : LPAREN STRING RPAREN'
+    p[0] = p[2]
+
+
 def p_quoted(p):
     'expr : QUOTE STRING QUOTE'
     p[0] = p[2]
@@ -339,4 +350,4 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test2.erb'))
+    pprint(parse('test.erb'))

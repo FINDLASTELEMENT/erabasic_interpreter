@@ -242,7 +242,7 @@ def t_ANY_error(t):
 
 
 def t_ID(t):
-    r'[^1-9\s]+'
+    r'[\w]+'
     if t.value in reserved.keys():
         t.type = reserved[t.value]
     return t
@@ -251,7 +251,7 @@ def t_ID(t):
 lexer = lex.lex()
 
 if __name__ == '__main__':
-    with open('test1.erb', 'r') as f:
+    with open('test.erb', 'r') as f:
         lexer.input(f.read(-1))
 
         while True:
