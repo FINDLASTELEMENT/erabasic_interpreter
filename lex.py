@@ -1,6 +1,5 @@
 from ply import lex
 import regex as re
-from instructions import instructions
 
 reserved = {
     'FOR': 'FOR',
@@ -59,19 +58,18 @@ tokens = (
     'COMMA',
     'LBRACE',  # 중괄호
     'RBRACE',
+    'PERCENT',
     'SLASHAT',  # \@
     'CHAR',
     'COLON',
     'PRINT',
     'DOLLAR',
-    'LABEL',
     'ID',
     'WTSPC',
     'COMMENT',
     'AT',
 )
 tokens += tuple(reserved.values())
-tokens += instructions
 
 states = (
     ('string', 'exclusive'),
@@ -79,7 +77,7 @@ states = (
     ('expr', 'inclusive'),
     ('strexpr', 'inclusive'),
     ('ternary', 'inclusive'),
-    ('label', 'exclusive'),
+    ('strternary', 'exclusive')
 )
 
 t_ignore = ' \t'
@@ -110,15 +108,15 @@ t_BOR = r'\|'
 t_XOR = '\^\^'
 t_BXOR = '\^'
 t_SUBSIT = r'='
-t_QUESTION = r'\?'
 t_SHARP = r'\#'
+t_strternary_SHARP = r'\#'
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_string_lstring_CHAR = r'(\\.|.)'
+t_strternary_CHAR = r'(\\[^\#]|[^\#])'
 t_COLON = r':'
 t_COMMA = r','
 t_AT = r'@'
-t_label_LABEL = '[A-Za-z]+'
 
 
 def t_COMMENT(t):
@@ -172,7 +170,6 @@ def t_ANY_NEWLINE(t):
 
 def t_DOLLAR(t):
     r'\$'
-    t.lexer.push_state('label')
     return t
 
 
@@ -188,13 +185,13 @@ def t_expr_RBRACE(t):
     return t
 
 
-def t_string_MOD(t):
+def t_string_PERCENT(t):
     r'%'
     t.lexer.push_state('strexpr')
     return t
 
 
-def t_strexpr_MOD(t):
+def t_strexpr_PERCENT(t):
     r'%'
     t.lexer.pop_state()
     return t
@@ -210,7 +207,7 @@ def t_string_QUOTE(t):
     t.lexer.pop_state()
 
 
-def t_ternary_SLASHAT(t):
+def t_strternary_SLASHAT(t):
     r'\\@'
     t.lexer.pop_state()
     return t
@@ -218,7 +215,14 @@ def t_ternary_SLASHAT(t):
 
 def t_string_SLASHAT(t):
     r'\\@'
-    t.lexer.push_state('ternary')
+    t.lexer.push_state('strternary')
+    t.lexer.push_state('INITIAL')
+    return t
+
+
+def t_QUESTION(t):
+    r'\?'
+    t.lexer.pop_state()
     return t
 
 
@@ -233,11 +237,6 @@ def t_ANY_error(t):
     t.lexer.skip(1)
 
 
-def t_label_error(t):
-    print("invalid label token", t.value[0])
-    t.lexer.skip(1)
-
-
 def t_ID(t):
     r'[a-zA-Z_]+'
     if t.value in reserved.keys():
@@ -248,7 +247,7 @@ def t_ID(t):
 lexer = lex.lex()
 
 if __name__ == '__main__':
-    with open('test.erb', 'r') as f:
+    with open('test1.erb', 'r') as f:
         lexer.input(f.read(-1))
 
         while True:

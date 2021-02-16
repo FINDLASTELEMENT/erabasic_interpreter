@@ -41,8 +41,25 @@ def p_PRINT(p):
 
 
 def p_assign(p):
-    'inst : ID SUBSIT expr'
-    p[0] = ('ASSIGN', p[0], p[3])
+    '''inst : var BINOPER SUBSIT expr
+            | var BINOPER SUBSIT STRING
+            | var BINOPER SUBSIT empty
+            | var empty SUBSIT expr
+            | var empty SUBSIT STRING
+            | var empty SUBSIT empty'''
+    p[0] = ('ASSIGN', p[1], p[2], p[4])
+
+
+def p_crease_front(p):
+    '''inst : INCREASE var
+            | DECREASE var'''
+    p[0] = (p[1], p[2])
+
+
+def p_crease_rear(p):
+    '''inst : var INCREASE
+            | var DECREASE'''
+    p[0] = (p[2], p[1])
 
 
 def p_WHILE(p):
@@ -59,6 +76,11 @@ def p_FOR(p):
 def p_DOLOOP(p):
     'inst : DO insts LOOP expr'
     p[0] = ('DO', p[4], p[2])
+
+
+def p_REPEAT(p):
+    'inst : REPEAT expr insts REND'
+    p[0] = ('REPEAT', p[2], p[3])
 
 
 def p_IF(p):
@@ -108,34 +130,47 @@ def p_SIF(p):
     p[0] = ('SIF', p[2], p[3])
 
 
+def p_func_def(p):
+    '''inst : AT ID LPAREN fargs RPAREN'''
+    p[0] = ('FUNCDEF', p[2], p[4])
+
+
 def p_INSTCALL(p):
-    'inst : ID args'
+    '''inst : ID args
+            | ID empty'''
     p[0] = ('INST', p.slice[1].value, p[2])
 
 
+def p_LABEL(p):
+    'inst : DOLLAR ID'
+    p[0] = ('LABEL', p[2])
+
+
 def p_STRING(p):
-    'STRING : CHAR'
-    p[0] = p[1]
+    '''STRING : CHAR
+              | FORMAT'''
+    p[0] = (p[1],)
+
+
+#def p_STRCAT(p):
+#    'STRING : STRING STRING'
+#    p[0] = p[1] + p[2]
 
 
 def p_char(p):
-    '''STRING : STRING CHAR'''
-    if type(p[1]) == str:
-        p[0] = p[1] + p[2]
-    elif type(p[1][-1]) == str:
-        p[0] = p[1][:-1] + ((p[1][-1] + p[2]),)  # if possible, connect strings to improve readability
-    else:
-        p[0] = ('STRCAT', p[1], p[2])
+    '''STRING : STRING CHAR
+              | STRING FORMAT'''
+    p[0] = p[1] + (p[2],)
 
 
 def p_STRFORMAT(p):
-    '''STRING : STRING LBRACE expr RBRACE
-              | STRING MOD expr MOD
-              | STRING SLASHAT expr QUESTION expr SHARP expr SLASHAT'''
-    if p[2] == r'\@':
-        p[3] = ('TERNARY', p[3], p[5], p[7])
+    '''FORMAT : LBRACE expr RBRACE
+              | PERCENT expr PERCENT
+              | SLASHAT expr QUESTION STRING SHARP STRING SLASHAT'''
+    if p[1] == r'\@':
+        p[2] = ('TERNARY', p[2], p[4], p[6])
 
-    p[0] = ('STRCAT', p[1], p[3])
+    p[0] = (p[2],)
 
 
 def p_arg(p):
@@ -153,38 +188,33 @@ def p_args(p):
         p[0] = p[1] + (p[3],)
 
 
+def p_farg(p):
+    '''farg : ID'''
+    p[0] = p[1]
+
+
+def p_fargs(p):
+    '''fargs : farg %prec merge
+             | fargs COMMA ID %prec merge'''
+    if len(p) == 2:
+        p[0] = (p[1],)
+    else:
+        p[0] = p[1] + (p[3],)
+
+
 def p_extend_args(p):
     'args : args COMMA expr'
     p[0] = p[1] + (p[3],)
 
 
 def p_index(p):
-    '''expr : expr COLON expr'''
+    '''array : ID COLON expr
+             | array COLON expr'''
     p[0] = ('INDEX', p[1], p[3])
 
 
 def p_int_binop(p):
-    '''expr : expr PLUS expr
-            | expr MINUS expr
-            | expr TIMES expr
-            | expr DIVIDE expr
-            | expr EQUALS expr
-            | expr NEQUALS expr
-            | expr LESS expr
-            | expr LESSEQ expr
-            | expr GREATER expr
-            | expr GREATEQ expr
-            | expr LSHIFT expr
-            | expr RSHIFT expr
-            | expr AND expr
-            | expr NAND expr
-            | expr OR expr
-            | expr NOR expr
-            | expr XOR expr
-            | expr BAND expr
-            | expr BOR expr
-            | expr BXOR expr
-            | expr MOD expr'''
+    '''expr : expr BINOPER expr'''
 
     p[0] = (p[2], p[1], p[3])
 
@@ -215,11 +245,52 @@ def p_expr2NUM(p):
 
 def p_expr2ID(p):
     'expr : ID'
-    p[0] = ('ID', p[1])
+    p[0] = p[1]
+
+
+def p_expr2array(p):
+    'expr : array'
+    p[0] = p[1]
+
+
+def p_var(p):
+    '''var : ID
+           | array'''
+    p[0] = p[1]
+
+
+def p_binoper(p):
+    '''BINOPER : PLUS
+            | MINUS
+            | TIMES
+            | DIVIDE
+            | EQUALS
+            | NEQUALS
+            | LESS
+            | LESSEQ
+            | GREATER
+            | GREATEQ
+            | LSHIFT
+            | RSHIFT
+            | AND
+            | NAND
+            | OR
+            | NOR
+            | XOR
+            | BAND
+            | BOR
+            | BXOR
+            | MOD '''
+    p[0] = p[1]
 
 
 def p_parens(p):
     'expr : LPAREN expr RPAREN'
+    p[0] = p[2]
+
+
+def p_quoted(p):
+    'expr : QUOTE STRING QUOTE'
     p[0] = p[2]
 
 
@@ -230,7 +301,7 @@ def p_empty(p):
 
 def p_error(p):
     if p:
-        print("Syntax error in input!", p)
+        print("Syntax error in input!", p, parser.token())
     else:
         print('end of file')
         return
@@ -247,4 +318,4 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test.erb'))
+    pprint(parse('test1.erb'))
