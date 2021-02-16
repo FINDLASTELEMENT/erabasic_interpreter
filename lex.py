@@ -238,7 +238,7 @@ def t_ANY_error(t):
 
 
 def t_ID(t):
-    r'[a-zA-Z_]+'
+    r'[^1-9\s]+'
     if t.value in reserved.keys():
         t.type = reserved[t.value]
     return t

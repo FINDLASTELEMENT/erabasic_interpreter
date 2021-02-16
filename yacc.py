@@ -147,8 +147,8 @@ def p_LABEL(p):
 
 
 def p_STRING(p):
-    '''STRING : CHAR
-              | FORMAT'''
+    '''STRING : CHAR %prec merge
+              | FORMAT %prec merge'''
     p[0] = (p[1],)
 
 
@@ -158,19 +158,20 @@ def p_STRING(p):
 
 
 def p_char(p):
-    '''STRING : STRING CHAR
-              | STRING FORMAT'''
+    '''STRING : STRING CHAR %prec merge
+              | STRING FORMAT %prec merge'''
     p[0] = p[1] + (p[2],)
 
 
 def p_STRFORMAT(p):
     '''FORMAT : LBRACE expr RBRACE
-              | PERCENT expr PERCENT
-              | SLASHAT expr QUESTION STRING SHARP STRING SLASHAT'''
-    if p[1] == r'\@':
-        p[2] = ('TERNARY', p[2], p[4], p[6])
-
+              | PERCENT expr PERCENT'''
     p[0] = (p[2],)
+
+
+def p_STRTERNARY(p):
+    'FORMAT : SLASHAT expr QUESTION STRING SHARP STRING SLASHAT'
+    p[0] = ('TERNARY', p[2], p[4], p[6])
 
 
 def p_arg(p):
@@ -214,7 +215,27 @@ def p_index(p):
 
 
 def p_int_binop(p):
-    '''expr : expr BINOPER expr'''
+    '''expr : expr PLUS expr
+            | expr MINUS expr
+            | expr TIMES expr
+            | expr DIVIDE expr
+            | expr EQUALS expr
+            | expr NEQUALS expr
+            | expr LESS expr
+            | expr LESSEQ expr
+            | expr GREATER expr
+            | expr GREATEQ expr
+            | expr LSHIFT expr
+            | expr RSHIFT expr
+            | expr AND expr
+            | expr NAND expr
+            | expr OR expr
+            | expr NOR expr
+            | expr XOR expr
+            | expr BAND expr
+            | expr BOR expr
+            | expr BXOR expr
+            | expr MOD expr'''
 
     p[0] = (p[2], p[1], p[3])
 
@@ -318,4 +339,4 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test1.erb'))
+    pprint(parse('test2.erb'))
