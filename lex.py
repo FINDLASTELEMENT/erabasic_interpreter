@@ -123,6 +123,10 @@ def t_COMMENT(t):
     r';.*'
     pass
 
+def t_lstring_COMMENT(t):
+    r';.*'
+    pass
+
 
 def opt_parse(string, option_regexes):
     result = []
