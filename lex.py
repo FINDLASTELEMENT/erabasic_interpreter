@@ -77,6 +77,8 @@ tokens = (
     'COLON',
     'PRINT',
     'DOLLAR',
+    'SKIPSTART',
+    'SKIPEND',
     'ID',
     'WTSPC',
     'COMMENT',
@@ -95,9 +97,10 @@ states = (
     ('strternary', 'exclusive'),
     ('strvarasign', 'inclusive'),
     ('dims', 'inclusive'),
+    ('SKIP', 'exclusive')
 )
 
-t_ignore = ' \t\ufeff'
+t_ignore = '( |\t|\ufeff)'
 
 t_INCREASE = r'\+\+'
 t_DECREASE = r'--'
@@ -115,7 +118,7 @@ t_NAND = r'!&'
 t_NOR = r'!\|'
 t_NOT = r'!'
 t_BNOT = r'~'
-t_MOD = r'%'
+t_INITIAL_MOD = r'%'
 t_LESS = r'<'
 t_GREATER = r'>'
 t_AND = r'&&'
@@ -178,7 +181,7 @@ def t_PRINT(t):
         r'(L|W)'
     ))
 
-    if 'FORM' in opts:
+    if 'FORM' in opts:  # todo
         t.lexer.push_state('fstring')
     elif 'FORMS' not in opts:
         t.lexer.push_state('lstring')
@@ -187,6 +190,11 @@ def t_PRINT(t):
     # FORMS is for displaying string variable.
 
     return t
+
+
+def t_SKIP_NEWLINE(t):
+    r'\n+'
+    pass
 
 
 def t_ANY_NEWLINE(t):
@@ -259,6 +267,21 @@ def t_NUMBER(t):
     return t
 
 
+def t_SKIPSTART(t):
+    r'\[SKIPSTART\]'
+    t.lexer.push_state('SKIP')
+
+
+def t_SKIP_SKIPEND(t):
+    r'\[SKIPEND\]'
+    t.lexer.pop_state()
+
+
+def t_SKIP_throw(t):
+    r'.'
+    pass
+
+
 def t_ANY_error(t):
     if t.value[0]:
         print("invalid token while lexing", t.value[0], 'at', t.lineno)
@@ -275,7 +298,7 @@ def t_ID(t):
         if t.value == 'DIMS':
             t.lexer.push_state('dims')
     elif t.value in var_type_table.keys() and var_type_table[t.value] == STRING:
-        if "=" in t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]:  # this code will
+        if re.match(r'^[^!<>=]*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]):  # this code will
             # lookahead the code until it finds \n, and checks whether it is an assignment
             # to decide the type of following expression without other traits.
             t.lexer.push_state('strvarasign')

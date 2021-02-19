@@ -35,7 +35,7 @@ def p_insts(p):
 
 
 def p_PRINT(p):
-    '''inst : PRINT expr
+    '''inst : PRINT STRING
             | PRINT empty'''
     p[0] = (p.slice[1].value, p[2])
 
@@ -367,4 +367,4 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test.erb'))
+    pprint(parse('test2.erb'))
