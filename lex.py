@@ -18,7 +18,20 @@ reserved = {
     'SELECTCASE': 'SELECTCASE',
     'CASE': 'CASE',
     'CASEELSE': 'CASEELSE',
-    'ENDSELECT': 'ENDSELECT'
+    'ENDSELECT': 'ENDSELECT',
+    'FUNCTION': 'FUNCTION',
+    'FUNCTIONS': 'FUNCTIONS',
+    'LOCALSIZE': 'LOCALSIZE',
+    'LOCALSSIZE': 'LOCALSSIZE',
+    'DIM': 'DIM',
+    'DIMS': 'DIMS',
+    'DYNAMIC': 'DYNAMIC',
+    'CONST': 'CONST',
+    'REF': 'REF',
+    'ONLY': 'ONLY',
+    'PRI': 'PRI',
+    'LATER': 'LATER',
+    'SINGLE': 'SINGLE',
 }
 
 tokens = (
@@ -68,19 +81,23 @@ tokens = (
     'WTSPC',
     'COMMENT',
     'AT',
+    'WHITESPACE'
 )
 tokens += tuple(reserved.values())
 
 states = (
     ('string', 'exclusive'),
+    ('fstring', 'exclusive'),
     ('lstring', 'exclusive'),
     ('expr', 'inclusive'),
     ('strexpr', 'inclusive'),
     ('ternary', 'inclusive'),
-    ('strternary', 'exclusive')
+    ('strternary', 'exclusive'),
+    ('strvarasign', 'inclusive'),
+    ('dims', 'inclusive'),
 )
 
-t_ignore = ' \t'
+t_ignore = ' \t\ufeff'
 
 t_INCREASE = r'\+\+'
 t_DECREASE = r'--'
@@ -112,11 +129,17 @@ t_SHARP = r'\#'
 t_strternary_SHARP = r'\#'
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
-t_string_lstring_CHAR = r'(\\.|.)'
+t_string_lstring_fstring_CHAR = r'(\\.|.)'
 t_strternary_CHAR = r'(\\[^\#]|[^\#])'
 t_COLON = r':'
 t_COMMA = r','
 t_AT = r'@'
+
+
+def t_strvarasign_SUBSIT(t):
+    r'='
+    t.lexer.push_state('string')
+    return t
 
 
 def t_COMMENT(t):
@@ -156,7 +179,7 @@ def t_PRINT(t):
     ))
 
     if 'FORM' in opts:
-        t.lexer.push_state('string')
+        t.lexer.push_state('fstring')
     elif 'FORMS' not in opts:
         t.lexer.push_state('lstring')
     else:
@@ -177,7 +200,7 @@ def t_DOLLAR(t):
     return t
 
 
-def t_string_LBRACE(t):
+def t_string_fstring_strternary_LBRACE(t):
     r'\{'
     t.lexer.push_state('expr')
     return t
@@ -189,7 +212,7 @@ def t_expr_RBRACE(t):
     return t
 
 
-def t_string_PERCENT(t):
+def t_string_fstring_strternary_PERCENT(t):
     r'%'
     t.lexer.push_state('strexpr')
     return t
@@ -217,7 +240,7 @@ def t_strternary_SLASHAT(t):
     return t
 
 
-def t_string_SLASHAT(t):
+def t_string_fstring_SLASHAT(t):
     r'\\@'
     t.lexer.push_state('strternary')
     t.lexer.push_state('INITIAL')
@@ -237,18 +260,35 @@ def t_NUMBER(t):
 
 
 def t_ANY_error(t):
-    print("invalid token while lexing", t.value[0])
+    if t.value[0]:
+        print("invalid token while lexing", t.value[0], 'at', t.lineno)
+    else:
+        print('end of file')
     t.lexer.skip(1)
 
 
 def t_ID(t):
     r'[\w]+'
+    global var_type_table
     if t.value in reserved.keys():
         t.type = reserved[t.value]
+        if t.value == 'DIMS':
+            t.lexer.push_state('dims')
+    elif t.value in var_type_table.keys() and var_type_table[t.value] == STRING:
+        if "=" in t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]:  # this code will
+            # lookahead the code until it finds \n, and checks whether it is an assignment
+            # to decide the type of following expression without other traits.
+            t.lexer.push_state('strvarasign')
     return t
 
 
-lexer = lex.lex()
+lexer = lex.lex(reflags=re.UNICODE)
+
+
+STRING = str
+INT = int
+var_type_table = {'MASTERNAME': STRING, 'CSTR': STRING}
+
 
 if __name__ == '__main__':
     with open('test.erb', 'r') as f:

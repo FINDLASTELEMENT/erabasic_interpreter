@@ -17,6 +17,7 @@ precedence = (
     ('left', 'LSHIFT', 'RSHIFT'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
+    ('left', 'PERCENT'),
     ('nonassoc', 'BNOT', 'NOT'),
     ('nonassoc', 'UMINUS'),
     ('left', 'ID'),
@@ -34,42 +35,47 @@ def p_insts(p):
 
 
 def p_PRINT(p):
-    '''inst : PRINT STRING
-            | PRINT expr
+    '''inst : PRINT expr
             | PRINT empty'''
     p[0] = (p.slice[1].value, p[2])
 
 
+def p_assign_left(p):
+    '''asleft : var BINOPER SUBSIT
+              | var empty SUBSIT'''
+    p[0] = (p[1], p[2], p[3])
+
+
 def p_assign(p):
-    '''inst : var BINOPER SUBSIT expr
-            | var BINOPER SUBSIT STRING
-            | var BINOPER SUBSIT empty
-            | var empty SUBSIT expr
-            | var empty SUBSIT STRING
-            | var empty SUBSIT empty'''
-    p[0] = ('ASSIGN', p[1], p[2], p[4])
+    '''inst : asleft expr 
+            | asleft empty 
+            | asleft MOD expr MOD  %prec PERCENT'''
+    if len(p) == 3:
+        p[0] = ('ASSIGN',) + p[1] + (p[2],)
+    else:
+        p[0] = ('ASSIGN',) + p[1] + (p[3],)
 
 
 def p_crease_front(p):
-    '''inst : INCREASE var
-            | DECREASE var'''
+    '''inst : INCREASE var 
+            | DECREASE var '''
     p[0] = (p[1], p[2])
 
 
 def p_crease_rear(p):
-    '''inst : var INCREASE
-            | var DECREASE'''
+    '''inst : var INCREASE 
+            | var DECREASE '''
     p[0] = (p[2], p[1])
 
 
 def p_WHILE(p):
-    '''inst : WHILE expr insts WEND'''
+    '''inst : WHILE expr  insts WEND '''
     p[0] = ('WHILE', p[2], p[3])
 
 
 def p_FOR(p):
-    '''inst : FOR ID COMMA expr COMMA expr empty empty insts NEXT
-            | FOR ID COMMA expr COMMA expr COMMA expr insts NEXT'''
+    '''inst : FOR ID COMMA expr COMMA expr empty empty  insts NEXT 
+            | FOR ID COMMA expr COMMA expr COMMA expr  insts NEXT '''
     p[0] = ('FOR', p[2], p[4], p[6], p[8] if p[8] else 1, p[9])
 
 
@@ -131,7 +137,10 @@ def p_SIF(p):
 
 
 def p_func_def(p):
-    '''inst : AT ID LPAREN fargs RPAREN'''
+    '''inst : AT ID COMMA fargs FUNCATTRIBS
+            | AT ID empty empty FUNCATTRIBS
+            | AT ID COMMA fargs empty
+            | AT ID empty empty empty'''
     p[0] = ('FUNCDEF', p[2], p[4])
 
 
@@ -141,6 +150,12 @@ def p_INSTCALL(p):
     p[0] = ('INST', p.slice[1].value, p[2])
 
 
+def p_inline_call(p):
+    '''expr : ID LPAREN args RPAREN
+            | ID LPAREN arg RPAREN'''
+    p[0] = ('CALL', p[1], p[3])
+
+
 def p_LABEL(p):
     'inst : DOLLAR ID'
     p[0] = ('LABEL', p[2])
@@ -148,13 +163,8 @@ def p_LABEL(p):
 
 def p_STRING(p):
     '''STRING : CHAR %prec merge
-              | FORMAT %prec merge'''
+              | FORMAT'''
     p[0] = (p[1],)
-
-
-#def p_STRCAT(p):
-#    'STRING : STRING STRING'
-#    p[0] = p[1] + p[2]
 
 
 def p_char(p):
@@ -165,24 +175,24 @@ def p_char(p):
 
 def p_STRFORMAT(p):
     '''FORMAT : LBRACE expr RBRACE
-              | PERCENT expr PERCENT'''
+              | PERCENT expr PERCENT
+              | SLASHAT STRTERNARY SLASHAT'''
     p[0] = (p[2],)
 
 
 def p_STRTERNARY(p):
-    'FORMAT : SLASHAT expr QUESTION STRING SHARP STRING SLASHAT'
-    p[0] = ('TERNARY', p[2], p[4], p[6])
+    'STRTERNARY : expr QUESTION STRING SHARP STRING'
+    p[0] = ('TERNARY', p[1], p[3], p[5])
 
 
 def p_arg(p):
-    '''arg : STRING
-           | expr'''
+    '''arg : expr'''
     p[0] = p[1]
 
 
 def p_args(p):
-    '''args : arg %prec merge
-            | args COMMA arg %prec merge'''
+    '''args : arg
+            | args COMMA arg'''
     if len(p) == 2:
         p[0] = (p[1],)
     else:
@@ -203,9 +213,23 @@ def p_fargs(p):
         p[0] = p[1] + (p[3],)
 
 
-def p_extend_args(p):
-    'args : args COMMA expr'
-    p[0] = p[1] + (p[3],)
+def p_function_attrib(p):
+    '''FUNCATTRIB : SHARP ONLY
+                  | SHARP FUNCTION
+                  | SHARP FUNCTIONS
+                  | SHARP PRI
+                  | SHARP LATER
+                  | SHARP SINGLE'''
+    p[0] = p[2]
+
+
+def p_function_attribs(p):
+    '''FUNCATTRIBS : FUNCATTRIB
+                   | FUNCATTRIBS FUNCATTRIBS'''
+    if len(p) == 2:
+        p[0] = (p[1],)
+    else:
+        p[0] = p[1] + (p[2],)
 
 
 def p_index(p):
@@ -258,25 +282,15 @@ def p_uminus(p):
 
 
 def p_ternary(p):
-    '''expr : expr QUESTION expr SHARP expr
-            | expr QUESTION STRING SHARP STRING
-            | expr QUESTION expr SHARP STRING
-            | expr QUESTION STRING SHARP expr'''
-    p[0] = ('TERNARY', p[1], p[3], p[5])
+    '''expr : expr QUESTION expr SHARP expr'''
+    p[0] = ('ITERNARY', p[1], p[3], p[5])
 
 
-def p_expr2NUM(p):
-    'expr : NUMBER'
-    p[0] = p[1]
-
-
-def p_expr2ID(p):
-    'expr : ID'
-    p[0] = p[1]
-
-
-def p_expr2array(p):
-    'expr : array'
+def p_expr(p):
+    '''expr : NUMBER
+             | ID
+             | array
+             | STRING'''
     p[0] = p[1]
 
 
@@ -313,6 +327,7 @@ def p_binoper(p):
 
 def p_parens(p):
     'expr : LPAREN expr RPAREN'
+    'expr : LPAREN expr RPAREN'
     p[0] = p[2]
 
 
@@ -322,7 +337,7 @@ def p_str_parens(p):
 
 
 def p_quoted(p):
-    'expr : QUOTE STRING QUOTE'
+    'STRING : QUOTE STRING QUOTE'
     p[0] = p[2]
 
 
@@ -332,10 +347,12 @@ def p_empty(p):
 
 
 def p_error(p):
+    global errorcount
     if p:
         print("Syntax error in input!", p, parser.token())
+        exit()
     else:
-        print('end of file')
+        print('end of file while parsing')
         return
 
 
