@@ -158,7 +158,7 @@ def p_func_def(p):
             | AT ID empty empty FUNCATTRIBS
             | AT ID COMMA fargs empty
             | AT ID empty empty empty'''
-    p[0] = ('FUNCDEF', p[2], p[4])
+    p[0] = ('FUNCDEF', p[2], p[4], p[5])
 
 
 def p_INSTCALL(p):
@@ -169,7 +169,8 @@ def p_INSTCALL(p):
 
 def p_inline_call(p):
     '''expr : ID LPAREN args RPAREN
-            | ID LPAREN arg RPAREN'''
+            | ID LPAREN arg RPAREN
+            | ID LPAREN empty RPAREN'''
     p[0] = ('CALL', p[1], p[3])
 
 
@@ -228,6 +229,43 @@ def p_fargs(p):
         p[0] = (p[1],)
     else:
         p[0] = p[1] + (p[3],)
+
+
+def p_var_attrib(p):
+    '''VARATTRIB : REF
+                 | DYNAMIC
+                 | CONST'''
+    p[0] = p[1]
+
+
+def p_var_attribs(p):
+    '''VARATTRIBS : VARATTRIB
+                  | VARATTRIBS VARATTRIB'''
+    if len(p) == 2:
+        p[0] = (p[1],)
+    else:
+        p[0] = p[1] + (p[2],)
+
+
+def p_DIM_head(p):
+    '''DIMHEAD : SHARP DIM VARATTRIBS
+               | SHARP DIMS VARATTRIBS
+               | SHARP DIM empty
+               | SHARP DIMS empty'''
+    p[0] = (p[2], p[3])
+
+
+def p_DIM_tail(p):
+    '''DIMTAIL : empty empty empty
+               | expr ASSIGN args
+               | empty ASSIGN args
+               | expr empty empty'''
+    p[0] = (p[1], p[2], p[3])
+
+
+def p_DIM(p):
+    '''FUNCATTRIB : DIMHEAD ID DIMTAIL DIMEND'''
+    p[0] = p[1] + (p[2],) + p[3]
 
 
 def p_function_attrib(p):
@@ -389,4 +427,4 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test2.erb'))
+    pprint(parse('test3.erb'))

@@ -73,6 +73,7 @@ tokens = (
     'XOR',
     'BXOR',
     'SUBSIT',
+    'ASSIGN',
     'QUOTE',
     'QUESTION',
     'SHARP',
@@ -80,6 +81,7 @@ tokens = (
     'LPAREN',
     'NUMBER',
     'NEWLINE',
+    'DIMEND',
     'COMMA',
     'LBRACE',  # 중괄호
     'RBRACE',
@@ -108,9 +110,9 @@ states = (
     ('ternary', 'inclusive'),
     ('strternary', 'exclusive'),
     ('strvarasign', 'inclusive'),
-    ('dims', 'inclusive'),
     ('SKIP', 'exclusive'),
-    ('argedfstr', 'exclusive')
+    ('argedfstr', 'exclusive'),
+    ('dim', 'inclusive')
 )
 
 t_ignore = ' \t\ufeff'
@@ -161,6 +163,12 @@ def t_argedfstr_WHITESPACE(t):
 def t_strvarasign_SUBSIT(t):
     r'='
     t.lexer.push_state('string')
+    return t
+
+
+def t_dim_SUBSIT(t):
+    r'='
+    t.type = 'ASSIGN'
     return t
 
 
@@ -215,6 +223,13 @@ def t_SKIP_NEWLINE(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
     pass
+
+
+def t_dim_NEWLINE(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
+    t.type = 'DIMEND'
+    return t
 
 
 def t_ANY_NEWLINE(t):
@@ -335,18 +350,32 @@ def t_ID(t):
     if t.value in reserved.keys():
         t.type = reserved[t.value]
         if t.value == 'DIMS':
-            t.lexer.push_state('dims')
+            parts = t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0].split(' ')
+
+            for p in parts:
+                if p not in ('DYNAMIC', 'REF', 'CONST') and p:  # find variable name
+                    var_type_table[p] = STRING  # and register that to the dictionary
+                    break
+
+        if t.value in ('DIM', 'DIMS'):
+            t.lexer.push_state('dim')
+
     elif t.value in var_type_table.keys() and var_type_table[t.value] == STRING:
-        if re.match(r'^[^!<>=]*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]):  # this code will
+        if re.match(r'^[^!<>=]*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]) and \
+                '#' not in t.lexer.lexdata[:t.lexer.lexpos].split('\n')[-1]:  # this code will
             # lookahead the code until it finds \n, and checks whether it is an assignment
             # to decide the type of following expression without other traits.
+            # (and also exclude line starting with #)
             t.lexer.push_state('strvarasign')
+
     elif t.value in fstr_start:
         t.lexer.push_state('fstring')
+
     elif t.value in arged_fstr_start:
         t.lexer.push_state('argedfstr')
         t.lexer.push_state('argedfstr')  # this will make the lexer ignore whitespace once,
         # and if it meets next space, then it exits state.
+
     return t
 
 
