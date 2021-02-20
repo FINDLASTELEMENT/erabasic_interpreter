@@ -73,9 +73,15 @@ def p_WHILE(p):
     p[0] = ('WHILE', p[2], p[3])
 
 
+def p_FORHEAD(p):
+    '''FORHEAD : FOR ID
+               | FOR array'''
+    p[0] = (p[1], p[2])
+
+
 def p_FOR(p):
-    '''inst : FOR ID COMMA expr COMMA expr empty empty  insts NEXT 
-            | FOR ID COMMA expr COMMA expr COMMA expr  insts NEXT '''
+    '''inst : FORHEAD COMMA expr COMMA expr empty empty  insts NEXT
+            | FORHEAD ID COMMA expr COMMA expr COMMA expr  insts NEXT '''
     p[0] = ('FOR', p[2], p[4], p[6], p[8] if p[8] else 1, p[9])
 
 
@@ -117,7 +123,8 @@ def p_elseif_blocks(p):
 
 
 def p_elseif_block(p):
-    'elseif_block : ELSEIF expr insts'
+    '''elseif_block : ELSEIF expr insts
+                    | ELSEIF expr empty'''
     p[0] = ('ELSEIF', p[2], p[3])
 
 

@@ -34,6 +34,18 @@ reserved = {
     'SINGLE': 'SINGLE',
 }
 
+fstr_start = (
+    'GOTOFORM',
+    'TRYGOTOFORM'
+)
+
+arged_fstr_start = (
+    'JUMPFORM',
+    'TRYJUMPFORM',
+    'CALLFORM',
+    'TRYCALLFORM'
+)
+
 tokens = (
     'INCREASE',
     'DECREASE',
@@ -97,7 +109,8 @@ states = (
     ('strternary', 'exclusive'),
     ('strvarasign', 'inclusive'),
     ('dims', 'inclusive'),
-    ('SKIP', 'exclusive')
+    ('SKIP', 'exclusive'),
+    ('argedfstr', 'exclusive')
 )
 
 t_ignore = ' \t\ufeff'
@@ -133,10 +146,16 @@ t_strternary_SHARP = r'\#'
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_string_lstring_fstring_CHAR = r'(\\.|.)'
+t_argedfstr_CHAR = r'[^ ]'
 t_strternary_CHAR = r'(\\[^\#]|[^\#])'
 t_COLON = r':'
 t_COMMA = r','
 t_AT = r'@'
+
+
+def t_argedfstr_WHITESPACE(t):
+    r'[ ]'
+    t.lexer.pop_state()
 
 
 def t_strvarasign_SUBSIT(t):
@@ -209,7 +228,7 @@ def t_DOLLAR(t):
     return t
 
 
-def t_string_fstring_strternary_LBRACE(t):
+def t_string_fstring_argedfstr_strternary_LBRACE(t):
     r'\{'
     t.lexer.push_state('expr')
     return t
@@ -221,7 +240,7 @@ def t_expr_RBRACE(t):
     return t
 
 
-def t_string_fstring_strternary_PERCENT(t):
+def t_string_fstring_argedfstr_strternary_PERCENT(t):
     r'%'
     t.lexer.push_state('strexpr')
     return t
@@ -249,7 +268,7 @@ def t_strternary_SLASHAT(t):
     return t
 
 
-def t_string_fstring_SLASHAT(t):
+def t_string_fstring_argedfstr_SLASHAT(t):
     r'\\@'
     t.lexer.push_state('strternary')
     t.lexer.push_state('INITIAL')
@@ -320,6 +339,12 @@ def t_ID(t):
             # lookahead the code until it finds \n, and checks whether it is an assignment
             # to decide the type of following expression without other traits.
             t.lexer.push_state('strvarasign')
+    elif t.value in fstr_start:
+        t.lexer.push_state('fstring')
+    elif t.value in arged_fstr_start:
+        t.lexer.push_state('argedfstr')
+        t.lexer.push_state('argedfstr')  # this will make the lexer ignore whitespace once,
+        # and if it meets next space, then it exits state.
     return t
 
 
