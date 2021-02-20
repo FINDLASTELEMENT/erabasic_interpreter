@@ -353,8 +353,13 @@ def p_str_parens(p):
     p[0] = p[2]
 
 
+def p_quoted_emptystring(p):
+    'STRING : QUOTE QUOTE'
+    p[0] = None
+
+
 def p_quoted(p):
-    'STRING : QUOTE STRING QUOTE'
+    '''STRING : QUOTE STRING QUOTE'''
     p[0] = p[2]
 
 

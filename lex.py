@@ -255,11 +255,13 @@ def t_strexpr_PERCENT(t):
 def t_QUOTE(t):
     r'"'
     t.lexer.push_state('string')
+    return t
 
 
 def t_string_QUOTE(t):
     r'"'
     t.lexer.pop_state()
+    return t
 
 
 def t_strternary_SLASHAT(t):
