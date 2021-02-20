@@ -100,7 +100,7 @@ states = (
     ('SKIP', 'exclusive')
 )
 
-t_ignore = '( |\t|\ufeff)'
+t_ignore = ' \t\ufeff'
 
 t_INCREASE = r'\+\+'
 t_DECREASE = r'--'
@@ -194,6 +194,7 @@ def t_PRINT(t):
 
 def t_SKIP_NEWLINE(t):
     r'\n+'
+    t.lexer.lineno += len(t.value)
     pass
 
 
@@ -262,8 +263,25 @@ def t_QUESTION(t):
 
 
 def t_NUMBER(t):
-    r'[0-9]+'
-    t.value = int(t.value)
+    r'((0b|0x)[0-9]+|[0-9]+(e|p)[0-9]+)'  # 0x0000, 0b0000, 00e0000, 00p0000
+    if 'x' in t.value:
+        t.value = int(t.value, 16)
+    elif 'b' in t.value:
+        t.value = int(t.value, 2)
+
+    elif 'e' in t.value or 'p' in t.value:
+        if 'e' in t.value:
+            base = 10
+            a, b = t.value.split('e')
+        else:
+            base = 2
+            a, b = t.value.split('p')
+
+        t.value = int(a) * base ** int(b)
+
+    else:
+        t.value = int(t.value)
+
     return t
 
 

@@ -90,11 +90,21 @@ def p_REPEAT(p):
 
 
 def p_IF(p):
-    '''inst : IF expr insts elseif_blocks ELSE insts ENDIF
-            | IF expr insts empty ELSE insts ENDIF
-            | IF expr insts elseif_blocks empty empty ENDIF
-            | IF expr insts empty empty empty ENDIF'''
-    p[0] = ('IF', p[2], p[3], p[4], p[6])
+    '''inst : IFBODY elseif_blocks ENDIF
+            | IFBODY empty ENDIF'''
+    p[0] = ('IF', p[1], p[2])
+
+
+def p_IFBODY(p):
+    '''IFBODY : IF expr insts
+              | IF expr empty'''
+    p[0] = (p[2], p[3])
+
+
+def p_ELSEBLOCK(p):
+    '''elseif_block : ELSE insts
+                 | ELSE empty'''
+    p[0] = p[2]
 
 
 def p_elseif_blocks(p):
@@ -348,7 +358,7 @@ def p_empty(p):
 
 def p_error(p):
     global errorcount
-    if p:
+    if p or __debug__:
         print("Syntax error in input!", p, parser.token())
         exit()
     else:
