@@ -3,6 +3,7 @@ from lex import tokens
 from lex import reserved
 from instructions import *
 from pprint import pprint
+import time
 
 
 precedence = (
@@ -122,9 +123,14 @@ def p_elseif_blocks(p):
         p[0] = p[1] + p[2]
 
 
+def p_elseif_empty_condition(p):
+    '''elseif_block : ELSEIF empty NEWLINE insts'''
+    p[0] = ('ELSE', p[3])
+
+
 def p_elseif_block(p):
-    '''elseif_block : ELSEIF expr insts
-                    | ELSEIF expr empty'''
+    '''elseif_block : ELSEIF expr NEWLINE insts
+                    | ELSEIF expr NEWLINE empty'''
     p[0] = ('ELSEIF', p[2], p[3])
 
 
@@ -191,9 +197,16 @@ def p_char(p):
     p[0] = p[1] + (p[2],)
 
 
+def p_exformat(p):
+    '''EXFORMAT : expr empty empty empty empty
+                | expr COMMA expr empty empty
+                | expr COMMA expr COMMA ID'''
+    p[0] = (p[1], p[3], p[5])
+
+
 def p_STRFORMAT(p):
-    '''FORMAT : LBRACE expr RBRACE
-              | PERCENT expr PERCENT
+    '''FORMAT : LBRACE EXFORMAT RBRACE
+              | PERCENT EXFORMAT PERCENT
               | SLASHAT STRTERNARY SLASHAT'''
     p[0] = (p[2],)
 
@@ -402,7 +415,7 @@ def p_quoted(p):
 
 
 def p_empty(p):
-    'empty : '
+    '''empty : '''
     pass
 
 
@@ -427,4 +440,8 @@ def parse(filename):
 
 
 if __name__ == '__main__':
-    pprint(parse('test3.erb'))
+    start = time.perf_counter()
+    result = parse('test4.erb')
+    end = time.perf_counter()
+    pprint(result)
+    print(f'{end - start} seconds elapsed for parsing')

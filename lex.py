@@ -112,7 +112,12 @@ states = (
     ('strvarasign', 'inclusive'),
     ('SKIP', 'exclusive'),
     ('argedfstr', 'exclusive'),
-    ('dim', 'inclusive')
+    ('dim', 'inclusive'),
+    ('newline', 'inclusive')
+)
+
+newline_needed = (
+    'ELSEIF',
 )
 
 t_ignore = ' \t\ufeff'
@@ -151,7 +156,7 @@ t_string_lstring_fstring_CHAR = r'(\\.|.)'
 t_argedfstr_CHAR = r'[^ ]'
 t_strternary_CHAR = r'(\\[^\#]|[^\#])'
 t_COLON = r':'
-t_COMMA = r','
+t_INITIAL_strexpr_expr_COMMA = r','
 t_AT = r'@'
 
 
@@ -216,6 +221,13 @@ def t_PRINT(t):
         t.lexer.push_state('INITIAL')
     # FORMS is for displaying string variable.
 
+    return t
+
+
+def t_newline_NEWLINE(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
+    t.lexer.pop_state()
     return t
 
 
@@ -299,7 +311,7 @@ def t_QUESTION(t):
 
 
 def t_NUMBER(t):
-    r'((0b|0x)[0-9]+|[0-9]+(e|p)[0-9]+)'  # 0x0000, 0b0000, 00e0000, 00p0000
+    r'((0b|0x|)[0-9]+|[0-9]+(e|p)[0-9]+)'  # 0x0000, 0b0000, 00e0000, 00p0000
     if 'x' in t.value:
         t.value = int(t.value, 16)
     elif 'b' in t.value:
@@ -359,6 +371,9 @@ def t_ID(t):
 
         if t.value in ('DIM', 'DIMS'):
             t.lexer.push_state('dim')
+
+        if t.value in newline_needed:
+            t.lexer.push_state('newline')
 
     elif t.value in var_type_table.keys() and var_type_table[t.value] == STRING:
         if re.match(r'^[^!<>=]*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]) and \
