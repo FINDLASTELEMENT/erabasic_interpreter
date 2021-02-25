@@ -23,6 +23,8 @@ reserved = {
     'FUNCTIONS': 'FUNCTIONS',
     'LOCALSIZE': 'LOCALSIZE',
     'LOCALSSIZE': 'LOCALSSIZE',
+    'CONTINUE': 'CONTINUE',
+    'BREAK': 'BREAK',
     'DIM': 'DIM',
     'DIMS': 'DIMS',
     'DYNAMIC': 'DYNAMIC',
@@ -72,6 +74,7 @@ tokens = (
     'BOR',
     'XOR',
     'BXOR',
+    'SSUBSIT',
     'SUBSIT',
     'ASSIGN',
     'QUOTE',
@@ -80,6 +83,7 @@ tokens = (
     'RPAREN',
     'LPAREN',
     'NUMBER',
+    'FLOAT',
     'NEWLINE',
     'DIMEND',
     'COMMA',
@@ -147,6 +151,7 @@ t_BAND = r'&'
 t_BOR = r'\|'
 t_XOR = '\^\^'
 t_BXOR = '\^'
+t_SSUBSIT = r"'="
 t_SUBSIT = r'='
 t_SHARP = r'\#'
 t_strternary_SHARP = r'\#'
@@ -220,6 +225,8 @@ def t_PRINT(t):
     else:
         t.lexer.push_state('INITIAL')
     # FORMS is for displaying string variable.
+
+    t.value = t.value.strip()
 
     return t
 
@@ -310,6 +317,13 @@ def t_QUESTION(t):
     return t
 
 
+def t_FLOAT(t):
+    r'[0-9]*\.[0-9]+'
+    t.value = float(t.value)
+
+    return t
+
+
 def t_NUMBER(t):
     r'((0b|0x|)[0-9]+|[0-9]+(e|p)[0-9]+)'  # 0x0000, 0b0000, 00e0000, 00p0000
     if 'x' in t.value:
@@ -376,7 +390,7 @@ def t_ID(t):
             t.lexer.push_state('newline')
 
     elif t.value in var_type_table.keys() and var_type_table[t.value] == STRING:
-        if re.match(r'^[^!<>=]*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]) and \
+        if re.match(r'^[^!<>=\']*=[^!<>=]*$', t.lexer.lexdata[t.lexer.lexpos:].split("\n")[0]) and \
                 '#' not in t.lexer.lexdata[:t.lexer.lexpos].split('\n')[-1]:  # this code will
             # lookahead the code until it finds \n, and checks whether it is an assignment
             # to decide the type of following expression without other traits.
@@ -399,7 +413,7 @@ lexer = lex.lex(reflags=re.UNICODE)
 
 STRING = str
 INT = int
-var_type_table = {'MASTERNAME': STRING, 'CSTR': STRING}
+var_type_table = {'MASTERNAME': STRING, 'CSTR': STRING, 'LOCALS': STRING}
 
 
 if __name__ == '__main__':

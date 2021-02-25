@@ -41,9 +41,25 @@ def p_PRINT(p):
     p[0] = (p.slice[1].value, p[2])
 
 
+def p_CONTINUE(p):
+    '''inst : CONTINUE'''
+    p[0] = p[1]
+
+
+def p_BREAK(p):
+    '''inst : BREAK'''
+    p[0] = p[1]
+
+
+def p_assign_eq(p):
+    '''EQ : SUBSIT
+          | SSUBSIT'''
+    p[0] = p[1]
+
+
 def p_assign_left(p):
-    '''asleft : var BINOPER SUBSIT
-              | var empty SUBSIT'''
+    '''asleft : var BINOPER EQ
+              | var empty EQ'''
     p[0] = (p[1], p[2], p[3])
 
 
@@ -231,13 +247,13 @@ def p_args(p):
 
 
 def p_farg(p):
-    '''farg : ID'''
+    '''farg : var'''
     p[0] = p[1]
 
 
 def p_fargs(p):
     '''fargs : farg %prec merge
-             | fargs COMMA ID %prec merge'''
+             | fargs COMMA var %prec merge'''
     if len(p) == 2:
         p[0] = (p[1],)
     else:
@@ -356,6 +372,7 @@ def p_ternary(p):
 
 def p_expr(p):
     '''expr : NUMBER
+             | FLOAT
              | ID
              | array
              | STRING'''
