@@ -2,5 +2,5 @@
 # *
 *.erb
 *.pyc
-/parser.out
-/parsetab.py
+/Frontend/parser.out
+/Frontend/parsetab.py

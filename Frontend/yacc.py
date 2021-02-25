@@ -1,7 +1,6 @@
 import ply.yacc as yacc
 from lex import tokens
 from lex import reserved
-from instructions import *
 from pprint import pprint
 import time
 

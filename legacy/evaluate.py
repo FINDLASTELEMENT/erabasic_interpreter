@@ -26,5 +26,5 @@ def evaluate_code(code: str):
 
 
 if __name__ == '__main__':
-    with open('../test.erb', 'r') as f:
+    with open('../Frontend/test.erb', 'r') as f:
         evaluate_code(f.read(-1))
