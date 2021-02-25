@@ -1,8 +1,5 @@
-import regex
-from typing import *
 from context import *
-import sys
-from exp_evaluater import eval_exp
+from legacy.exp_evaluater import eval_exp
 
 
 def remove_comments(line:str):
