@@ -17,9 +17,11 @@ if __name__ == "__main__":
     sstack = []
     var = RandomList()
     svar = RandomList()
+    stackp = []
+    sstackp = []
 
     while ic is not None:
-        stack, sstack, var, svar, code, jmptable, ic = \
+        stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic = \
             instructions[code[ic]].run(stack, sstack, var, svar, code, jmptable, [], [], ic)
 
     print(stack, sstack)

@@ -1,4 +1,4 @@
-import sys
+import sys, inspect
 from random_access_list import *
 
 
@@ -17,7 +17,7 @@ def string(x):
     return [len(encoded), ] + encoded
 
 
-class Inst:
+class NOP:
     @classmethod
     def __int__(cls):
         return instructions.index(cls)
@@ -27,31 +27,27 @@ class Inst:
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class HALT(Inst):
+class HALT(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, None
 
 
-class NOP(Inst):
-    pass
-
-
-class PUSH(Inst):
+class PUSH(NOP):
     @staticmethod
     def run(stack: list, sstack: list, var, svar, code, jmptable, stackp, sstackp, ic):
         stack.append(code[ic+1])
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class POP(Inst):
+class POP(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class PUSHS(Inst):
+class PUSHS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         length = code[ic+1]
@@ -65,63 +61,138 @@ def binoper(stack, func):
     stack.append(func(a, b))
 
 
-class POPS(Inst):
+class POPS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class ADD(Inst):
+class ADD(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(stack, lambda x, y: x + y)
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class SUB(Inst):
+class SUB(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(stack, lambda x, y: x - y)
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class MUL(Inst):
+class MUL(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(stack, lambda x, y: x * y)
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class DIV(Inst):
+class DIV(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(stack, lambda x, y: x / y)
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class AND(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: int(x and y))
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class OR(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: int(x or y))
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class XOR(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: int(bool(x) != bool(y)))
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class BAND(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: x & y)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class BOR(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: x | y)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class BXOR(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: x ^ y)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class LSHFT(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: x << y)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class RSHFT(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        binoper(stack, lambda x, y: x >> y)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+def uoper(stack, func):
+    x = stack.pop()
+    stack.append(func(x))
+
+
+class NOT(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        uoper(stack, lambda x: int(not x))
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+class BNOT(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        uoper(stack, lambda x: ~x)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
     
 
-class CMP(Inst):
+class CMP(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(stack, lambda x, y: (x - y)//abs(x - y))
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class SEQ(Inst):
+class SEQ(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(sstack, lambda x, y: int(x == y))
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class CATS(Inst):
+class CATS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         binoper(sstack, lambda x, y: x + y)
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class MULS(Inst):
+class MULS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         a = sstack.pop()
@@ -131,20 +202,22 @@ class MULS(Inst):
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class JMP(Inst):
+class JMP(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
-        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, code[ic+1]
+        addr = stack.pop()
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, addr
 
 
-class JEQ(Inst):
+class JEQ(NOP):
     matches = [0]
 
     @classmethod
     def run(cls, stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        addr = stack.pop()
         condition = stack.pop()
         if condition in cls.matches:
-            return stack, sstack, var, svar, code, jmptable, code[ic + 1]
+            return stack, sstack, var, svar, code, jmptable, addr
         else:
             return stack, sstack, var, svar, code, jmptable, ic + 1
 
@@ -161,53 +234,47 @@ class JLE(JEQ):
     matches = [-1, ]
 
 
-class DJMP(Inst):
+class ADDR(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
-        addr = jmptable.get(stack.pop())
+        addr = jmptable.get(sstack.pop())
         if addr:
+            stack.push(addr)
             return stack, sstack, var, svar, code, jmptable, stackp, sstackp, addr
         else:
+            stack.push(-1)
             return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class ST(Inst):
+class ST(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         var[code[ic+1]] = stack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class LD(Inst):
+class LD(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stack.append(var[code[ic+1]])
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class STS(Inst):
+class STS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         svar[code[ic + 1]] = sstack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class LDS(Inst):
+class LDS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstack.append(var[code[ic + 1]])
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class ITOS(Inst):
-    @staticmethod
-    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
-        x = stack.pop()
-        sstack.append(str(x))
-        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
-
-
-class STRI(Inst):
+class STRI(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         i = stack.pop()
@@ -216,21 +283,14 @@ class STRI(Inst):
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class STOI(Inst):
-    @staticmethod
-    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
-        stack.append(int(sstack.pop()))
-        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
-
-
-class LEN(Inst):
+class LEN(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stack.append(len(sstack.pop()))
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class PRT(Inst):
+class PRT(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         s = sstack.pop()
@@ -238,63 +298,74 @@ class PRT(Inst):
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class INP(Inst):
+class INP(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstack.append(input())
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
 
 
-class PUSHLOC(Inst):
+class PUSHLOC(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stackp.append(stack.len() - 1)
 
 
-class PUSHLOCS(Inst):
+class PUSHLOCS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstackp.append(sstack.len() - 1)
 
 
-class POPLOC(Inst):
+class POPLOC(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stackp.pop()
 
 
-class POPLOCS(Inst):
+class POPLOCS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstackp.pop()
 
 
-class STLOC(Inst):
+class STLOC(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         var[stackp[-1] + code[ic + 1]] = stack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class LDLOC(Inst):
+class LDLOC(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         stack.append(var[stackp[-1] + code[ic + 1]])
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class STLOCS(Inst):
+class STLOCS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         svar[sstackp[-1] + code[ic + 1]] = sstack.pop()
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-class LDLOCS(Inst):
+class LDLOCS(NOP):
     @staticmethod
     def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
         sstack.append(svar[sstackp[-1] + code[ic + 1]])
         return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 2
 
 
-instructions = Inst.__subclasses__()
+class GETADDR(NOP):
+    @staticmethod
+    def run(stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic):
+        stack.append(ic)
+        return stack, sstack, var, svar, code, jmptable, stackp, sstackp, ic + 1
+
+
+instructions = []
+
+for name, obj in inspect.getmembers(sys.modules[__name__]):
+    if inspect.isclass(obj):
+        instructions.append(obj)

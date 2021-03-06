@@ -18,7 +18,8 @@ testcode = flatten([
     LEN,
     ITOS,
     PRT,
-    JMP, 0,
+    PUSH, 0,
+    JMP,
     HALT
 ])
 
