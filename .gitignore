@@ -4,3 +4,5 @@
 *.pyc
 /Frontend/parser.out
 /Frontend/parsetab.py
+*.cpp
+*.h
